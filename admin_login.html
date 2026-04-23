@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Login</title>
+
+    <style>
+        body { background:#f4f6f9; font-family: Arial; }
+        .box {
+            width:300px; margin:100px auto; padding:20px;
+            background:white; border-radius:10px;
+            box-shadow:0 4px 10px rgba(0,0,0,0.1);
+            text-align:center;
+        }
+        input { width:90%; padding:10px; margin:10px 0; }
+        button {
+            padding:10px 20px;
+            background:#3498db; color:white;
+            border:none; border-radius:5px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="box">
+    <h2>Admin Login</h2>
+
+    <form method="POST">
+        <input name="username" placeholder="Username" required><br>
+        <input type="password" name="password" placeholder="Password" required><br>
+        <button>Login</button>
+    </form>
+
+    <p style="color:red;">{{ message }}</p>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,56 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+<div class="container" style="width:700px;">
+    <h2>📋 My Bookings</h2>
+
+    <!-- SEARCH FORM -->
+    <form method="POST">
+        <input type="text" name="phone" placeholder="Enter your phone number" required>
+        <button>Search</button>
+    </form>
+
+    <br>
+
+    {% if bookings %}
+    <table border="1">
+        <tr>
+            <th>Name</th>
+            <th>Room</th>
+            <th>Date</th>
+            <th>Status</th>
+            <th>Action</th>
+        </tr>
+
+        {% for b in bookings %}
+        <tr>
+            <td>{{ b[1] }}</td>
+            <td>{{ b[2] }}</td>
+            <td>{{ b[3] }}</td>
+
+            <!-- STATUS -->
+            <td>
+                {% if b[4] == 'Confirmed' %}
+                    <span style="color:green;">✔ Confirmed</span>
+                {% elif b[4] == 'Pending' %}
+                    <span style="color:orange;">⏳ Pending</span>
+                {% else %}
+                    <span style="color:red;">❌ Cancelled</span>
+                {% endif %}
+            </td>
+
+            <!-- ACTION -->
+            <td>
+                {% if b[4] != 'Cancelled' %}
+                    <a href="/cancel/{{ b[0] }}" style="color:red;">Cancel</a>
+                {% else %}
+                    ---
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% endif %}
+
+    <br>
+    <a href="/">⬅ Back to Home</a>
+</div>

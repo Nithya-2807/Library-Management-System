@@ -1,0 +1,64 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+<div class="container" style="width:800px;">
+    <h2>📊 Bookings (Admin Panel)</h2>
+
+    <table border="1">
+        <tr>
+            <th>Name</th>
+            <th>Room</th>
+            <th>Date</th>
+            <th>Status</th>
+            <th>Remaining Seats</th>
+            <th>Action</th>
+        </tr>
+
+        {% for b in bookings %}
+<tr>
+    <td>{{ b[1] }}</td>  <!-- name -->
+    <td>{{ b[2] }}</td>  <!-- room -->
+    <td>{{ b[3] }}</td>  <!-- date -->
+
+    <!-- STATUS -->
+    <td>
+        {% if b[4] == 'Confirmed' %}
+            <span style="color:green;">✔ Confirmed</span>
+        {% elif b[4] == 'Pending' %}
+            <span style="color:orange;">⏳ Pending</span>
+        {% else %}
+            <span style="color:red;">❌ Cancelled</span>
+        {% endif %}
+    </td>
+
+    <!-- REMAINING SEATS -->
+    <td>
+        {% if b[6] > 0 %}
+            {{ b[6] }} seats left
+        {% else %}
+            <span style="color:red;">Full</span>
+        {% endif %}
+    </td>
+
+    <!-- ACTIONS -->
+    <td>
+        {% if b[4] == 'Pending' and b[6] > 0 %}
+            <a href="/approve/{{ b[0] }}">Approve</a> |
+            <a href="/reject/{{ b[0] }}">Reject</a>
+
+        {% elif b[4] == 'Pending' and b[6] == 0 %}
+            No seats
+
+        {% elif b[4] == 'Confirmed' %}
+            <a href="/cancel/{{ b[0] }}">Cancel</a>
+
+        {% else %}
+            ---
+        {% endif %}
+    </td>
+</tr>
+{% endfor %}
+    </table>
+
+    <br>
+    <a href="/admin_dashboard">⬅ Back to Dashboard</a>
+</div>

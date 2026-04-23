@@ -1,0 +1,21 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+<div class="container">
+    <h2>✅ Booking Confirmed!</h2>
+
+    <p><strong>Name:</strong> {{ name }}</p>
+    <p><strong>Room:</strong> {{ room }}</p>
+    <p><strong>Date:</strong> {{ date }}</p>
+    <p><strong>Status:</strong> <span style="color:green;">{{ status }}</span></p>
+    <p style="color:orange;">{{ note }}</p>
+
+    <br>
+<form action="/my_bookings" method="POST">
+    <input type="hidden" name="phone" value="{{ phone }}">
+    <button>📊 View Booking Status</button>
+</form>
+
+    <br><br>
+
+    <a href="/">⬅ Back to Home</a>
+</div>
