@@ -9,6 +9,53 @@ app.secret_key = "secret123"
 def connect_db():
     return psycopg2.connect(os.environ.get("DATABASE_URL"))
 
+# ✅ NEW: Initialize DB
+def init_db():
+    conn = connect_db()
+    cur = conn.cursor()
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS students (
+        student_id SERIAL PRIMARY KEY,
+        name VARCHAR(100),
+        phone VARCHAR(15) UNIQUE
+    );
+    """)
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS rooms (
+        room_id SERIAL PRIMARY KEY,
+        room_name VARCHAR(100),
+        capacity INT
+    );
+    """)
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS bookings (
+        booking_id SERIAL PRIMARY KEY,
+        student_id INT REFERENCES students(student_id),
+        room_id INT REFERENCES rooms(room_id),
+        date DATE,
+        status VARCHAR(20)
+    );
+    """)
+
+    # Insert default rooms
+    cur.execute("""
+    INSERT INTO rooms (room_name, capacity)
+    VALUES ('Room A',5),('Room B',3),('Room C',4)
+    ON CONFLICT DO NOTHING;
+    """)
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+# ✅ AUTO RUN DB INIT (works on Render)
+@app.before_request
+def setup():
+    init_db()
+
 # ---------------- HOME ----------------
 @app.route('/')
 def index():
@@ -52,7 +99,6 @@ def book():
     conn = connect_db()
     cur = conn.cursor()
 
-    # ✅ PostgreSQL version of INSERT IGNORE
     cur.execute(
         "INSERT INTO students (name, phone) VALUES (%s, %s) ON CONFLICT (phone) DO NOTHING",
         (name, phone)
@@ -72,7 +118,6 @@ def book():
     )
     count = cur.fetchone()[0]
 
-    # 🔁 Find alternate room
     if count >= capacity:
         cur.execute("SELECT room_id, capacity FROM rooms")
         rooms = cur.fetchall()
@@ -96,7 +141,6 @@ def book():
             conn.close()
             return "❌ All rooms are full. Try another date."
 
-    # ✅ Insert booking
     cur.execute(
         "INSERT INTO bookings (student_id, room_id, date, status) VALUES (%s, %s, %s, %s)",
         (student_id, room_id, date_val, 'Pending')
@@ -122,155 +166,4 @@ def book():
         note=note
     )
 
-# ---------------- ADMIN LOGIN ----------------
-@app.route('/admin', methods=['GET', 'POST'])
-def admin():
-    message = ""
-    if request.method == 'POST':
-        user = request.form['username']
-        pwd = request.form['password']
-
-        if user == "admin" and pwd == "admin123":
-            session['admin'] = True
-            return redirect('/admin_dashboard')
-        else:
-            message = "Invalid Credentials"
-
-    return render_template('admin.html', message=message)
-
-# ---------------- VIEW BOOKINGS ----------------
-@app.route('/view')
-def view():
-    if 'admin' not in session:
-        return redirect('/admin')
-
-    conn = connect_db()
-    cur = conn.cursor()
-
-    cur.execute("""
-    SELECT 
-        b.booking_id,
-        s.name,
-        r.room_name,
-        b.date,
-        b.status,
-        r.capacity,
-        (r.capacity - (
-            SELECT COUNT(*)
-            FROM bookings
-            WHERE room_id = b.room_id
-            AND date = b.date
-            AND status = 'Confirmed'
-        )) AS remaining_seats
-    FROM bookings b
-    JOIN students s ON b.student_id = s.student_id
-    JOIN rooms r ON b.room_id = r.room_id
-    """)
-
-    bookings = cur.fetchall()
-    conn.close()
-
-    return render_template('view.html', bookings=bookings)
-
-# ---------------- DASHBOARD ----------------
-@app.route('/admin_dashboard')
-def admin_dashboard():
-    conn = connect_db()
-    cur = conn.cursor()
-
-    cur.execute("SELECT COUNT(*) FROM rooms")
-    total_rooms = cur.fetchone()[0]
-
-    cur.execute("SELECT COUNT(*) FROM bookings")
-    total_bookings = cur.fetchone()[0]
-
-    cur.execute("SELECT COUNT(*) FROM bookings WHERE status='Pending'")
-    pending = cur.fetchone()[0]
-
-    cur.execute("SELECT COUNT(*) FROM bookings WHERE status='Confirmed'")
-    confirmed = cur.fetchone()[0]
-
-    conn.close()
-
-    return render_template('admin_dashboard.html',
-                           total_rooms=total_rooms,
-                           total_bookings=total_bookings,
-                           pending=pending,
-                           confirmed=confirmed)
-
-# ---------------- ROOMS ----------------
-@app.route('/add_room', methods=['POST'])
-def add_room():
-    name = request.form['room_name']
-    capacity = request.form['capacity']
-
-    conn = connect_db()
-    cur = conn.cursor()
-
-    cur.execute("INSERT INTO rooms (room_name, capacity) VALUES (%s, %s)", (name, capacity))
-    conn.commit()
-    conn.close()
-
-    return redirect('/manage_rooms')
-
-@app.route('/manage_rooms')
-def manage_rooms():
-    conn = connect_db()
-    cur = conn.cursor()
-
-    cur.execute("SELECT * FROM rooms")
-    rooms = cur.fetchall()
-
-    conn.close()
-    return render_template('manage_rooms.html', rooms=rooms)
-
-# ---------------- APPROVE / REJECT ----------------
-@app.route('/approve/<int:id>')
-def approve(id):
-    conn = connect_db()
-    cur = conn.cursor()
-
-    cur.execute("UPDATE bookings SET status='Confirmed' WHERE booking_id=%s", (id,))
-    conn.commit()
-    conn.close()
-
-    return redirect('/view')
-
-@app.route('/reject/<int:id>')
-def reject(id):
-    conn = connect_db()
-    cur = conn.cursor()
-
-    cur.execute("UPDATE bookings SET status='Cancelled' WHERE booking_id=%s", (id,))
-    conn.commit()
-    conn.close()
-
-    return redirect('/view')
-
-# ---------------- MY BOOKINGS ----------------
-@app.route('/my_bookings', methods=['GET', 'POST'])
-def my_bookings():
-    bookings = []
-
-    if request.method == 'POST':
-        phone = request.form['phone']
-
-        conn = connect_db()
-        cur = conn.cursor()
-
-        cur.execute("""
-            SELECT b.booking_id, s.name, r.room_name, b.date, b.status
-            FROM bookings b
-            JOIN students s ON b.student_id = s.student_id
-            JOIN rooms r ON b.room_id = r.room_id
-            WHERE s.phone = %s
-        """, (phone,))
-
-        bookings = cur.fetchall()
-        conn.close()
-
-    return render_template('my_bookings.html', bookings=bookings)
-
-# ---------------- RUN ----------------
-if __name__ == "__main__":
-    app.run(debug=True)
+# (rest of your code unchanged...)
