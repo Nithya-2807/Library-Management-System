@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+body { font-family:Arial; background:#f4f6f9; }
+table { width:100%; border-collapse:collapse; }
+th, td { padding:10px; text-align:center; }
+th { background:#2c3e50; color:white; }
+.btn { background:red; color:white; padding:5px; text-decoration:none; }
+</style>
+</head>
+
+<body>
+
+<h2>Students</h2>
+
+<table>
+<tr><th>ID</th><th>Name</th><th>Action</th></tr>
+
+{% for s in students %}
+<tr>
+<td>{{ s[0] }}</td>
+<td>{{ s[1] }}</td>
+<td><a class="btn" href="/delete_student/{{ s[0] }}">Delete</a></td>
+</tr>
+{% endfor %}
+
+</table>
+
+<a href="/admin_dashboard">Back</a>
+
+</body>
+</html>
